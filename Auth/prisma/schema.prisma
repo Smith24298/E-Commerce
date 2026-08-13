@@ -1,0 +1,70 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+enum role {
+  USER
+  ADMIN
+  SELLER
+}
+enum user_status {
+  PENDING
+  APPROVED
+  REJECTED
+}
+model user {
+  id       String   @id @default(cuid())
+  email     String   @unique
+  password_hash  String
+  role     role   @default(USER)
+  status   user_status @default(PENDING)
+  name    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  refreshTokens refreshToken[]
+  passwordResetTokens passwordResetToken[]
+  emailVerificationTokens emailVerificationToken[]
+}
+
+model refreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      user     @relation(fields: [userId], references: [id])
+  validUntil DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model passwordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      user     @relation(fields: [userId], references: [id])
+  validUntil DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model emailVerificationToken{
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      user     @relation(fields: [userId], references: [id])
+  validUntil DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+
+
+
