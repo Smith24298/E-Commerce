@@ -1,18 +1,16 @@
-import jwt from "jsonwebtoken";
+import jwt, { SignOptions } from "jsonwebtoken";
+import environment from "../config/env";
 
-const payload = {
-    id: "user_id",
-    email: "user_email",
-    role: "user_role"
-}
-
+const options: SignOptions = {
+  expiresIn: environment.JWT_EXPIRES_IN as SignOptions["expiresIn"],
+};
 export const generateToken = (payload: object, expiresIn: string | number) => {
-    return jwt.sign(payload, process.env.JWT_SECRET as string, { expiresIn:"15m" });
+    return jwt.sign(payload, environment.JWT_SECRET, options);
 }
 
 export const verifyToken = (token: string) => {
     try {
-        return jwt.verify(token, process.env.JWT_SECRET as string);
+        return jwt.verify(token, environment.JWT_SECRET);
     } catch (error) {
         throw new Error("Invalid token");
     }

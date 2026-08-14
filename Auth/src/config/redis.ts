@@ -1,8 +1,9 @@
-import "dotenv/config";
+import environment from "./env";
 import IORedis from 'ioredis';
 
+const redisUrl = environment.REDIS_URL;
 export const redis  = new IORedis(
-    process.env.REDIS_URL!,
+    redisUrl,
     {
         maxRetriesPerRequest:null,
     }

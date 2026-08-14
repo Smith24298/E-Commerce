@@ -1,15 +1,17 @@
 import { Worker } from "bullmq";
 import { redis } from "../config/redis";
+import { registerTemplate } from '../mail.templates/mail.template';
+import { sendEmail } from '../utils/resend.service';
 
 console.log("Starting email worker...");
-//TODO : update the WOrker to send email using nodemailer and handle errors and retries
+
 const worker = new Worker(
   "email",
   async (job) => {
-    console.log("🔥 JOB RECEIVED");
-    console.log("Job ID:", job.id);
-    console.log("Job Name:", job.name);
-    console.log("Job Data:", job.data);
+    const { email, name, token } = job.data;
+    const html = registerTemplate(name, email, token);
+
+    await sendEmail(email, "Verify Your Email", html);
 
     return { success: true };
   },

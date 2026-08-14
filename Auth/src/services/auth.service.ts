@@ -59,6 +59,7 @@ export const register = async (data: {
   await emailQueue.add(
     "verify-email",
     {
+      name: user.name,
       email: user.email,
       token: verificationToken,
     },
