@@ -8,6 +8,7 @@ const environment = {
     RESEND_API_KEY: String(process.env.RESEND_API_KEY),
     DATABASE_URL: process.env.DATABASE_URL,
     NODE_ENV: process.env.NODE_ENV,
+    JWT_REFRESH_EXPIRES_IN: String(process.env.JWT_REFRESH_EXPIRES_IN),
 }
 
 for (const [key,value] of Object.entries(environment)) {

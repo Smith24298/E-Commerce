@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { register,verifyEmail,login,refreshAccessToken,forgetPasswordService } from "../services/auth.service";
+import { register,verifyEmail,login,refreshAccessToken,forgetPasswordService, logout } from "../services/auth.service";
 import envirnoment from "../config/env";
 export const registerUser = async (req: Request, res: Response) => {
     const result = await register(req.body);
@@ -29,7 +29,27 @@ export const refreshAccess = async (req: Request, res: Response) => {
         return res.status(401).json({ success: false, message: "Refresh token not found" });
     }
     const result = await refreshAccessToken(refreshToken);
+    res.cookie("refreshToken", result.refreshToken, {
+      httpOnly: true,
+      secure: envirnoment.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
     return res.status(200).json({ success: true, accessToken: result.accessToken });
+}
+
+export const logoutUser = async (req: Request, res: Response) => {
+    const refreshToken = req.cookies.refreshToken;
+    if (!refreshToken) {
+        return res.status(400).json({ success: false, message: "Refresh token not found" });
+    }
+    await logout(refreshToken);
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: envirnoment.NODE_ENV === "production",
+      sameSite: "strict",
+    });
+    return res.status(200).json({ success: true, message: "Logged out successfully" });
 }
 
 export const forgetPassword = async (req: Request, res: Response) => {

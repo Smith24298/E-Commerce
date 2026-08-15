@@ -42,6 +42,8 @@ model refreshToken {
   userId    String
   user      user     @relation(fields: [userId], references: [id])
   validUntil DateTime
+  used      Boolean  @default(false)
+  revoked   Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

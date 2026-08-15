@@ -6,7 +6,7 @@ export const loginRateLimiter = rateLimit({
     standardHeaders: "draft-8",
     legacyHeaders: false, 
     message: {
-        sucess: false,
+        success: false,
         message:"Too many login attempts from this IP, please try again after 15 minutes"
     },
 });
@@ -17,7 +17,7 @@ export const registerRateLimiter = rateLimit({
     standardHeaders: "draft-8",
     legacyHeaders: false,
     message: {
-        sucess: false,
+        success: false,
         message:"Too many registration attempts from this IP, please try again after 1 hour"
     },
 });
@@ -28,7 +28,7 @@ export const forgotPasswordRateLimiter = rateLimit({
     standardHeaders: "draft-8",
     legacyHeaders: false,
     message: {
-        sucess: false,
+        success: false,
         message:"Too many forgot password attempts from this IP, please try again after 1 hour"
     },
 });
@@ -39,7 +39,7 @@ export const resetPasswordRateLimiter = rateLimit({
     standardHeaders: "draft-8",
     legacyHeaders: false,
     message: {
-        sucess: false,
+        success: false,
         message:"Too many reset password attempts from this IP, please try again after 1 hour"
     },
 });
@@ -50,7 +50,7 @@ export const apiRateLimiter = rateLimit({
     standardHeaders: "draft-8",
     legacyHeaders: false,
     message: {
-        sucess: false,
+        success: false,
         message:"Too many requests from this IP, please try again after 1 minute"
     },
 });

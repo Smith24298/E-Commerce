@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
 import { prisma } from "../config/prisma";
 import { emailQueue } from "../config/emailQueue";
-import {generateToken, verifyToken} from '../utils/jwt';
+import {generateToken, verifyToken,generateRefreshToken} from '../utils/jwt';
 
 export const register = async (data: {
   email: string;
@@ -147,17 +147,15 @@ export const login = async (data: {
       id: user.id,
       email: user.email,
       role: user.role,
-    },
-    "15m"
+    }
   );
 
-  const refreshToken = generateToken(
+  const refreshToken = generateRefreshToken(
     {
       id: user.id,
       email: user.email,
       role: user.role,
     },
-    "7d"
   );
 
   const refreshTokenHash = crypto
@@ -190,7 +188,7 @@ export const refreshAccessToken = async (refreshToken: string) => {
     },
   });
 
-  if(!storedToken || storedToken.validUntil < new Date()){
+  if(!storedToken || storedToken.validUntil < new Date() || storedToken.used || storedToken.revoked){
     throw new Error("Invalid or expired refresh token");
   }
   const user = await prisma.user.findUnique({
@@ -201,15 +199,41 @@ export const refreshAccessToken = async (refreshToken: string) => {
   if(!user){
     throw new Error("User not found");
   }
+
+  await prisma.refreshToken.update({
+    where: { id: storedToken.id },
+    data: { used: true },
+  });
+
+  const newRefreshToken = generateRefreshToken({
+    id: user.id,
+    email: user.email,
+    role: user.role,
+  });
+
+  const newRefreshTokenHash = crypto
+    .createHash("sha256")
+    .update(newRefreshToken)
+    .digest("hex");
+
+  await prisma.refreshToken.create({
+    data: {
+      token: newRefreshTokenHash,
+      userId: user.id,
+      validUntil: new Date(
+        Date.now() + 7 * 24 * 60 * 60 * 1000
+      ),
+    },
+  });
+
   const accessToken = generateToken(
     {
       id: user.id,
       email: user.email,
       role: user.role,
-    },
-    "15m"
+    }
   );
-  return { accessToken };
+  return { accessToken, refreshToken: newRefreshToken };
 };
 
 export const forgetPasswordService = async (email:string)=>{
@@ -218,36 +242,50 @@ export const forgetPasswordService = async (email:string)=>{
       email
     }
   });
-  if(!user){
-    throw new Error("User not found");
-  }
-  const resetPasswordToken = crypto.randomBytes(32).toString("hex");
-  const tokenHash = crypto.createHash("sha256").update(resetPasswordToken).digest("hex");
-  const validUntil = new Date(Date.now() + 60 * 60 * 1000);
 
-  await prisma.passwordResetToken.create({
-    data:{
-      token:tokenHash,
-      userId:user.id,
-      validUntil
-    }
-  });
+  if(user){
+    const resetPasswordToken = crypto.randomBytes(32).toString("hex");
+    const tokenHash = crypto.createHash("sha256").update(resetPasswordToken).digest("hex");
+    const validUntil = new Date(Date.now() + 60 * 60 * 1000);
 
-  await emailQueue.add(
-    "reset-password",
-    {
-      name: user.name,
-      email: user.email,
-      token: resetPasswordToken,
-      isReset:true
-    },
-    {
-      attempts: 3,
-      backoff: {
-        type: "exponential",
-        delay: 5000,
+    await prisma.passwordResetToken.create({
+      data:{
+        token:tokenHash,
+        userId:user.id,
+        validUntil
+      }
+    });
+
+    await emailQueue.add(
+      "reset-password",
+      {
+        name: user.name,
+        email: user.email,
+        token: resetPasswordToken,
+        isReset:true
       },
+      {
+        attempts: 3,
+        backoff: {
+          type: "exponential",
+          delay: 5000,
+        },
+      },
+    );
+  }
+
+  return { message: "If the email exists, a password reset link has been sent." };
+};
+
+export const logout = async (refreshToken: string) => {
+  const refreshTokenHash = crypto.createHash("sha256").update(refreshToken).digest("hex");
+  await prisma.refreshToken.updateMany({
+    where: {
+      token: refreshTokenHash,
     },
-  );
-  return { message: "Password reset link sent to your email." };
+    data: {
+      revoked: true,
+    },
+  });
+  return { message: "Logged out successfully" };
 };
