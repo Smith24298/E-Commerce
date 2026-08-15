@@ -35,6 +35,6 @@ export const nameSchema = z
     message: "Name must not exceed 100 characters",
   });
 
-export const roleSchema = z.enum(["CUSTOMER", "VENDOR"], {
+export const roleSchema = z.enum(["USER", "SELLER"], {
   message: "Invalid role",
 });

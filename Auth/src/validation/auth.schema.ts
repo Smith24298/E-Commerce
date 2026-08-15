@@ -3,6 +3,7 @@ import {
   emailSchema,
   passwordSchema,
   nameSchema,
+  roleSchema
 } from "./common.schema";
 
 export const registerSchema = z
@@ -10,6 +11,7 @@ export const registerSchema = z
     email: emailSchema,
     password: passwordSchema,
     name: nameSchema,
+    role:roleSchema
   })
   .strict();
 
