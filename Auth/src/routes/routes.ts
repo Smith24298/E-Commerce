@@ -3,12 +3,12 @@ import { loginRateLimiter, registerRateLimiter, forgotPasswordRateLimiter, reset
 import {validate,validateQuery} from '../middlewares/validate';
 import { forgotPasswordSchema, loginSchema, registerSchema, resetPasswordSchema, verifyEmailSchema, refreshTokenSchema} from '../validation/auth.schema';
 import { emailQueue } from '../config/emailQueue';
-import { registerUser,verifyEmailToken } from '../controllers/auth.controllers';
+import { registerUser,verifyEmailToken,loginUser   } from '../controllers/auth.controllers';
 
 const router = Router();
 
 router.post('/register', registerRateLimiter, validate(registerSchema), registerUser);
-router.post('/login', loginRateLimiter, validate(loginSchema));
+router.post('/login', loginRateLimiter, validate(loginSchema), loginUser);
 router.post('/logout', apiRateLimiter);
 router.post('/refresh', apiRateLimiter, validate(refreshTokenSchema));
 router.post('/forgot-password', forgotPasswordRateLimiter, validate(forgotPasswordSchema));

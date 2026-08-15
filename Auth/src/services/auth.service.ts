@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
 import { prisma } from "../config/prisma";
 import { emailQueue } from "../config/emailQueue";
+import {generateToken, verifyToken} from '../utils/jwt';
 
 export const register = async (data: {
   email: string;
@@ -112,3 +113,32 @@ export const verifyEmail =async(token:string)=>{
   });
   return { message: "Email verified successfully." };
 }
+
+export const login = async (data:{email:string,password:string}) =>{
+  const User = await prisma.user.findFirst({
+    where:{
+      email:data.email
+    }
+  });
+  if(!User){
+    throw new Error("Invalid email or password");
+  }
+  if(User?.status !== "VERIFIED"){
+    throw new Error("Email not verified");
+  }
+  const isPasswordValid = await bcrypt.compare(data.password, User?.password_hash || "");
+  if(!User || !isPasswordValid){
+    throw new Error("Invalid email or password");
+  }
+  const accessToken = generateToken({id:User.id,email:User.email,role:User.role},"15m");
+  const refreshToken = generateToken({id:User.id,email:User.email,role:User.role},"7d");
+  const refreshTokenHashed = await crypto.createHash("sha256").update(refreshToken).digest("hex");
+  await prisma.refreshToken.create({
+    data:{
+      token:refreshTokenHashed,
+      userId:User.id,
+      validUntil:new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    }
+  })
+  return {accessToken,refreshToken};
+};
