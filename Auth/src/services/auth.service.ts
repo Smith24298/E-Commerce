@@ -114,31 +114,99 @@ export const verifyEmail =async(token:string)=>{
   return { message: "Email verified successfully." };
 }
 
-export const login = async (data:{email:string,password:string}) =>{
-  const User = await prisma.user.findFirst({
-    where:{
-      email:data.email
-    }
+export const login = async (data: {
+  email: string;
+  password: string;
+}) => {
+  const user = await prisma.user.findUnique({
+    where: {
+      email: data.email,
+    },
   });
-  if(!User){
+
+  if (!user) {
     throw new Error("Invalid email or password");
   }
-  if(User?.status !== "VERIFIED"){
+
+  if (user.status !== "VERIFIED") {
     throw new Error("Email not verified");
   }
-  const isPasswordValid = await bcrypt.compare(data.password, User?.password_hash || "");
-  if(!User || !isPasswordValid){
+
+  const isPasswordValid = await bcrypt.compare(
+    data.password,
+    user.password_hash
+  );
+
+  if (!isPasswordValid) {
     throw new Error("Invalid email or password");
   }
-  const accessToken = generateToken({id:User.id,email:User.email,role:User.role},"15m");
-  const refreshToken = generateToken({id:User.id,email:User.email,role:User.role},"7d");
-  const refreshTokenHashed = await crypto.createHash("sha256").update(refreshToken).digest("hex");
+
+  const accessToken = generateToken(
+    {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+    },
+    "15m"
+  );
+
+  const refreshToken = generateToken(
+    {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+    },
+    "7d"
+  );
+
+  const refreshTokenHash = crypto
+    .createHash("sha256")
+    .update(refreshToken)
+    .digest("hex");
+
   await prisma.refreshToken.create({
-    data:{
-      token:refreshTokenHashed,
-      userId:User.id,
-      validUntil:new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-    }
-  })
-  return {accessToken,refreshToken};
+    data: {
+      token: refreshTokenHash,
+      userId: user.id,
+      validUntil: new Date(
+        Date.now() + 7 * 24 * 60 * 60 * 1000
+      ),
+    },
+  });
+  
+
+  return {
+    accessToken,
+    refreshToken,
+  };
+};
+
+export const refreshAccessToken = async (refreshToken: string) => {
+  const refreshTokenHash = crypto.createHash("sha256").update(refreshToken).digest("hex");
+  const storedToken = await prisma.refreshToken.findUnique({
+    where: {
+      token: refreshTokenHash,
+    },
+  });
+
+  if(!storedToken || storedToken.validUntil < new Date()){
+    throw new Error("Invalid or expired refresh token");
+  }
+  const user = await prisma.user.findUnique({
+    where:{
+      id:storedToken.userId
+    },
+  });
+  if(!user){
+    throw new Error("User not found");
+  }
+  const accessToken = generateToken(
+    {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+    },
+    "15m"
+  );
+  return { accessToken };
 };

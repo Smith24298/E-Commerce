@@ -31,3 +31,17 @@ export const validateQuery = (schema: ZodType) => {
     next();
   };
 };
+
+export const validateCookie = (schema: ZodType) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const result = schema.safeParse(req.cookies);
+  
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        errors: result.error.issues
+      });
+    }
+    next();
+  };
+};
