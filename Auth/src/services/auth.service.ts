@@ -59,6 +59,7 @@ export const register = async (data: {
       name: user.name,
       email: user.email,
       token: verificationToken,
+      isReset:false
     },
     {
       attempts: 3,
@@ -209,4 +210,44 @@ export const refreshAccessToken = async (refreshToken: string) => {
     "15m"
   );
   return { accessToken };
+};
+
+export const forgetPasswordService = async (email:string)=>{
+  const user = await prisma.user.findUnique({
+    where:{
+      email
+    }
+  });
+  if(!user){
+    throw new Error("User not found");
+  }
+  const resetPasswordToken = crypto.randomBytes(32).toString("hex");
+  const tokenHash = crypto.createHash("sha256").update(resetPasswordToken).digest("hex");
+  const validUntil = new Date(Date.now() + 60 * 60 * 1000);
+
+  await prisma.passwordResetToken.create({
+    data:{
+      token:tokenHash,
+      userId:user.id,
+      validUntil
+    }
+  });
+
+  await emailQueue.add(
+    "reset-password",
+    {
+      name: user.name,
+      email: user.email,
+      token: resetPasswordToken,
+      isReset:true
+    },
+    {
+      attempts: 3,
+      backoff: {
+        type: "exponential",
+        delay: 5000,
+      },
+    },
+  );
+  return { message: "Password reset link sent to your email." };
 };

@@ -1,6 +1,6 @@
 import { Worker } from "bullmq";
 import { redis } from "../config/redis";
-import { registerTemplate } from '../mail.templates/mail.template';
+import { registerTemplate,resetPasswordTemplate } from '../mail.templates/mail.template';
 import { sendEmail } from '../utils/resend.service';
 
 console.log("Starting email worker...");
@@ -8,10 +8,10 @@ console.log("Starting email worker...");
 const worker = new Worker(
   "email",
   async (job) => {
-    const { email, name, token } = job.data;
-    const html = registerTemplate(name, email, token);
+    const { email, name, token,isReset } = job.data;
+    const html = isReset ? resetPasswordTemplate(name, email, token) : registerTemplate(name, email, token);
 
-    await sendEmail(email, "Verify Your Email", html);
+    await sendEmail(email, isReset ? "Reset Your Password" : "Verify Your Email", html);
 
     return { success: true };
   },
