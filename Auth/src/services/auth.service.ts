@@ -29,7 +29,7 @@ export const register = async (data: {
     .update(verificationToken)
     .digest("hex");
 
-  const validUntil = new Date(Date.now() + 60 * 60 * 1000);
+  const validUntil = new Date(Date.now() + 15 * 60 * 1000);
   const { user} = await prisma.$transaction(async (tx) => {
     const user = await tx.user.create({
       data: {
@@ -246,7 +246,7 @@ export const forgetPasswordService = async (email:string)=>{
   if(user){
     const resetPasswordToken = crypto.randomBytes(32).toString("hex");
     const tokenHash = crypto.createHash("sha256").update(resetPasswordToken).digest("hex");
-    const validUntil = new Date(Date.now() + 60 * 60 * 1000);
+    const validUntil = new Date(Date.now() + 15 * 60 * 1000);
 
     await prisma.passwordResetToken.create({
       data:{
@@ -288,4 +288,40 @@ export const logout = async (refreshToken: string) => {
     },
   });
   return { message: "Logged out successfully" };
+};
+export const resetPasswordService = async (data:{token:string,password:string})=>{
+  const tokenHash = crypto.createHash("sha256").update(data.token).digest("hex");
+  const resetToken = await prisma.passwordResetToken.findUnique({
+    where:{
+      token:tokenHash,
+    }
+  });
+  if(!resetToken || resetToken.validUntil < new Date() || resetToken.used){
+    throw new Error("Invalid or expired reset token");
+  }
+  const passwordHash = await bcrypt.hash(data.password, 12);
+  await prisma.$transaction(async(tx)=>{
+    await tx.user.update({
+      where:{
+        id:resetToken.userId
+      },
+      data:{
+        password_hash:passwordHash
+      }
+    });
+    await tx.passwordResetToken.update({
+      where:{
+        id:resetToken.id
+      },
+      data:{
+        used:true
+      }
+    });
+    await tx.refreshToken.updateMany({
+      where: { userId: resetToken.userId, revoked: false },
+      data: { revoked: true }
+    });
+  });
+
+  return { message: "Password reset successful" };
 };
