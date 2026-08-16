@@ -325,3 +325,18 @@ export const resetPasswordService = async (data:{token:string,password:string})=
 
   return { message: "Password reset successful" };
 };
+
+export const getMe = async (userId: string) => {
+  const user = await prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      role: true,
+    }
+  });
+  return user;
+};

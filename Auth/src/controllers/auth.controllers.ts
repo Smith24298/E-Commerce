@@ -1,6 +1,15 @@
 import { Request, Response } from "express";
-import { register,verifyEmail,login,refreshAccessToken,forgetPasswordService, resetPasswordService,logout } from "../services/auth.service";
+import { register,verifyEmail,login,refreshAccessToken,forgetPasswordService, resetPasswordService,logout,getMe as getMeService } from "../services/auth.service";
 import envirnoment from "../config/env";
+import { AuthPayload } from "../utils/jwt";
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: AuthPayload;
+    }
+  }
+}
 export const registerUser = async (req: Request, res: Response) => {
     const result = await register(req.body);
     return res.status(201).json(result);
@@ -61,4 +70,12 @@ export const forgetPassword = async (req: Request, res: Response) => {
 export const resetPassword = async (req:Request,res:Response)=>{
     const result = await resetPasswordService(req.body);
     return res.status(200).json(result);
+}
+
+export const getMe = async (req: Request, res: Response) => {
+  if (!req.user) {
+    return res.status(401).json({ success: false, message: "Unauthorized" });
+  }
+    const user = await getMeService(req.user.id);
+    return res.status(200).json({ success: true, user });
 }
