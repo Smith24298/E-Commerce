@@ -9,7 +9,7 @@ export const authenticateUser = (req: Request, res: Response, next: NextFunction
     const token = authHeader.substring(7);
     try {
         const decoded = verifyToken(token);
-        (req as any).user = decoded;
+        req.user = decoded;
         next();
     } catch (error) {
         return res.status(401).json({ success: false, message: "Invalid token" });

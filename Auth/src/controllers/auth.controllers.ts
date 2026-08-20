@@ -1,15 +1,22 @@
 import { Request, Response } from "express";
-import { register,verifyEmail,login,refreshAccessToken,forgetPasswordService, resetPasswordService,logout,getMe as getMeService } from "../services/auth.service";
+import { register,verifyEmail,login,refreshAccessToken,forgetPasswordService, resetPasswordService,logout,getMe as getMeService, REFRESH_TOKEN_MAX_AGE_MS } from "../services/auth.service";
 import envirnoment from "../config/env";
-import { AuthPayload } from "../utils/jwt";
+import "../types/express";
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: AuthPayload;
-    }
-  }
-}
+export const getCookieOptions = () => ({
+  httpOnly: true,
+  secure: envirnoment.NODE_ENV === "production",
+  sameSite: "strict" as const,
+  maxAge: REFRESH_TOKEN_MAX_AGE_MS,
+  path: "/",
+});
+
+export const getClearCookieOptions = () => ({
+  httpOnly: true,
+  secure: envirnoment.NODE_ENV === "production",
+  sameSite: "strict" as const,
+  path: "/",
+});
 export const registerUser = async (req: Request, res: Response) => {
     const result = await register(req.body);
     return res.status(201).json(result);
@@ -23,12 +30,7 @@ export const verifyEmailToken = async (req:Request,res:Response)=>{
 export const loginUser = async (req: Request, res: Response) => {
     const result = await login(req.body);
     const { accessToken, refreshToken } = result;
-    res.cookie("refreshToken", refreshToken, {
-    httpOnly: true,
-    secure: envirnoment.NODE_ENV === "production",
-    sameSite: "strict",
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
+    res.cookie("refreshToken", refreshToken, getCookieOptions());
     return res.status(200).json({ success: true, accessToken });
 }
 
@@ -38,12 +40,7 @@ export const refreshAccess = async (req: Request, res: Response) => {
         return res.status(401).json({ success: false, message: "Refresh token not found" });
     }
     const result = await refreshAccessToken(refreshToken);
-    res.cookie("refreshToken", result.refreshToken, {
-      httpOnly: true,
-      secure: envirnoment.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    res.cookie("refreshToken", result.refreshToken, getCookieOptions());
     return res.status(200).json({ success: true, accessToken: result.accessToken });
 }
 
@@ -53,11 +50,7 @@ export const logoutUser = async (req: Request, res: Response) => {
         return res.status(400).json({ success: false, message: "Refresh token not found" });
     }
     await logout(refreshToken);
-    res.clearCookie("refreshToken", {
-      httpOnly: true,
-      secure: envirnoment.NODE_ENV === "production",
-      sameSite: "strict",
-    });
+    res.clearCookie("refreshToken", getClearCookieOptions());
     return res.status(200).json({ success: true, message: "Logged out successfully" });
 }
 
