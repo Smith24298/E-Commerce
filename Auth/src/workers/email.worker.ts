@@ -9,7 +9,9 @@ const worker = new Worker(
   "email",
   async (job) => {
     const { email, name, token,isReset } = job.data;
-    const html = isReset ? resetPasswordTemplate(name, email, token) : registerTemplate(name, email, token);
+    const html = isReset
+  ? resetPasswordTemplate(name, token, email)
+  : registerTemplate(name, email, token);
 
     await sendEmail(email, isReset ? "Reset Your Password" : "Verify Your Email", html);
 

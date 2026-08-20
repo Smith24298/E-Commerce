@@ -7,38 +7,39 @@ export interface AuthPayload {
   role: "USER" | "SELLER" | "ADMIN";
 }
 
-const expiresIn: SignOptions["expiresIn"] = environment.JWT_EXPIRES_IN as SignOptions["expiresIn"];
-export const generateToken = (
-  payload: AuthPayload,
-) => {
+export const generateToken = (payload: AuthPayload) => {
+  const options: SignOptions = {
+    expiresIn: environment.JWT_EXPIRES_IN as SignOptions["expiresIn"],
+  };
+
   return jwt.sign(
     payload,
     environment.JWT_SECRET,
-    { expiresIn }
+    options
   );
 };
 
-export const verifyToken = (
-  token: string
-): AuthPayload => {
-  try {
-    const decoded = jwt.verify(
-      token,
-      environment.JWT_SECRET
-    );
+export const generateRefreshToken = (payload: AuthPayload) => {
+  const options: SignOptions = {
+    expiresIn: environment.JWT_REFRESH_EXPIRES_IN as SignOptions["expiresIn"],
+  };
 
-    if (typeof decoded === "string") {
-      throw new Error("Invalid token");
-    }
+  return jwt.sign(
+    payload,
+    environment.JWT_SECRET,
+    options
+  );
+};
 
-    return decoded as AuthPayload;
-  } catch {
+export const verifyToken = (token: string): AuthPayload => {
+  const decoded = jwt.verify(
+    token,
+    environment.JWT_SECRET
+  );
+
+  if (typeof decoded === "string") {
     throw new Error("Invalid token");
   }
+
+  return decoded as AuthPayload;
 };
-const refreshOptions: SignOptions = {
-    expiresIn: environment.JWT_REFRESH_EXPIRES_IN as SignOptions["expiresIn"]
-};
-export const generateRefreshToken = (payload: object) => {
-    return jwt.sign(payload, environment.JWT_SECRET, refreshOptions);
-}
